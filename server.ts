@@ -5,7 +5,7 @@ import v1 from "./v1";
 
 const app = new Elysia();
 
-app.use(cors({ origin: process.env.CORS_ORIGIN }));
+app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") }));
 
 app.get("/", () => "Hello from Algecom API!");
 app.get("/wakeup", set => set.status(200));
