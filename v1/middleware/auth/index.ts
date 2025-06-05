@@ -23,7 +23,7 @@ const cookieConfig: CookieOptions = {
 const authJwt = jwt({ secret: process.env.JWT_SECRET as string }).decorator.jwt;
 
 const checkAuthHandler = async (context: Context) => {
-  if (!context?.cookie?.authToken?.value) return false;
+  if (!context.cookie.authToken?.value) return false;
   return await authJwt.verify(context.cookie.authToken?.value) as unknown as AuthJwtValue;
 };
 
