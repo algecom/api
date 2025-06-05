@@ -13,7 +13,7 @@ const facebookApi = new FacebookApiService({
 const googleApi = new GoogleApi({
   clientId: process.env.GOOGLE_CLIENT_ID as string,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-  redirectUri: process.env.CORS_ORIGIN as string
+  redirectUri: process.env.CORS_ORIGIN?.split(",")?.find(e => e.includes("app.")) as string
 });
 
 class UserService {
