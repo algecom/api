@@ -67,7 +67,7 @@ const destroyAuthJwtCookie = (context: Context) => {
 const debugMiddleware = (app: Elysia) => app.onRequest(({ request }) => {
   console.log("\n===== REQUEST DEBUG =====");
   console.log("Method:", request.method);
-  console.log("URL:", request.url);
+  console.log("URL:", request.pathname);
   console.log("Origin header:", request.headers.get("origin"));
   console.log("Time:", new Date().toLocaleString());
   console.log("=========================\n");
