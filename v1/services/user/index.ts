@@ -124,6 +124,7 @@ class UserService {
   };
 
   async connectToGoogleSheets(user_uid: string, code: string): Promise<GoogleUser> {
+    if(!code) throw new Error("Unable to connect to Google. Missing credentials.");
     const tokens = await googleApi.exchangeCodeForTokens(code);
     const googleSheets = await this.insertGoogleSheets(user_uid, tokens);
     const userFromGoogle = await googleApi.getUserInfo(googleSheets);
