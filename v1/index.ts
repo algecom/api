@@ -27,6 +27,7 @@ const server = (app: Elysia) => {
       ["hub.mode"]: string, ["hub.challenge"]: string, ["hub.verify_token"]: string 
     };
     const response = await facebookApi.validateWebhook(mode, verify_token, challenge);
+    console.log(response ? "Webhook validated successfully ✅" : "Webhook validation failed ❌");
     return response;
   });
 
