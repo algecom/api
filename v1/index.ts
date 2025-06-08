@@ -20,7 +20,6 @@ const server = (app: Elysia) => {
   app.use(authMiddleware);
   app.use(responseMiddleware);
 
-  // validateWebhook
   app.get("/facebook/webhook", async ({ query }) => {
     const { 
       ["hub.mode"]: mode, ["hub.challenge"]: challenge, ["hub.verify_token"]: verify_token 

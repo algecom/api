@@ -8,8 +8,15 @@ export default (app: Elysia) => app
     error: error instanceof Error ? error.message : String(error)
   };
 })
-.onAfterHandle(({ response }) => {
+.onAfterHandle(({ response, path }) => {
   console.log({ response });
+  const excludeRoute: string[] = [ "/facebook/webhook" ]; // without /v1/
+
+  console.log(path);
+  
+  // Exclude routes from being formatted as a well-formed success/failure response.
+  if(excludeRoute.includes("/v1" + path)) return response;
+
   // If the response is already a well-formed success/failure response, leave it alone
   if (
     typeof response === 'object' &&
