@@ -21,11 +21,22 @@ const server = (app: Elysia) => {
   app.use(responseMiddleware);
 
   // validateWebhook
-  app.get("/facebook/webhook/verify", async ({ query }) => {
-    console.log({ query });
-    const { mode, token, challenge, verify_token } = query as { mode: string, token: string, challenge: string, verify_token: string };
-    const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);
+  app.get("/facebook/webhook", async ({ query }) => {
+    const { 
+      ["hub.mode"]: mode, ["hub.challenge"]: challenge, ["hub.verify_token"]: verify_token 
+    } = query as { 
+      ["hub.mode"]: string, ["hub.challenge"]: string, ["hub.verify_token"]: string 
+    };
+    const response = await facebookApi.validateWebhook(mode, verify_token, challenge);
     return response;
+  });
+
+  app.post("/facebook/webhook", async ({ body, query }) => {
+    console.log({ body, query });
+    // const { mode, token, challenge, verify_token } = body as { mode: string, token: string, challenge: string, verify_token: string };
+    // const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);
+    // return response;
+    return;
   });
   
   app.post("/login/facebook", async context => {

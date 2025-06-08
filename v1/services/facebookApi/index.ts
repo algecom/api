@@ -171,11 +171,8 @@ class FacebookApiService extends BaseApiClient {
     });
   }
 
-  async validateWebhook(mode: string, token: string, challenge: string, verifyToken: string): Promise<string | null> {
-    if (mode === 'subscribe' && token === verifyToken) {
-      return challenge;
-    }
-    return null;
+  async validateWebhook(mode: string, verifyToken: string, challenge: string): Promise<string | null> {
+    return (mode === 'subscribe' && verifyToken === process.env.FB_VERIFY_WEBHOOK_TOKEN) ? challenge : null;
   }
 
   async subscribeApp(accessToken: string, pageId: string): Promise<boolean> {
