@@ -10,12 +10,10 @@ export default (app: Elysia) => app
 })
 .onAfterHandle(({ response, path }) => {
   console.log({ response });
-  const excludeRoute: string[] = [ "/facebook/webhook" ]; // without /v1/
-
-  console.log(path);
+  const excludeRoute: string[] = [ "/v1/facebook/webhook" ];
   
   // Exclude routes from being formatted as a well-formed success/failure response.
-  if(excludeRoute.includes("/v1" + path)) return response;
+  if(excludeRoute.includes(path)) return response;
 
   // If the response is already a well-formed success/failure response, leave it alone
   if (
