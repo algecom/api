@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 
+import FacebookApiService from "./services/facebookApi";
 import UserService from "./services/user";
 import BusinessService from "./services/business";
 import responseMiddleware from "./middleware/response";
@@ -7,12 +8,25 @@ import { authMiddleware, refreshAuthJwtCookie, destroyAuthJwtCookie } from "./mi
 import type { AuthJwtValue } from "./middleware/auth/types";
 import type { BusinessDataUpdate, ChatTestData } from "./services/business/types";
 
+const facebookApi = new FacebookApiService({
+  clientId: process.env.FB_CLIENT_ID as string,
+  clientSecret: process.env.FB_CLIENT_SECRET as string
+});
+
 const userService = new UserService();
 const businessService = new BusinessService();
 
 const server = (app: Elysia) => {
   app.use(authMiddleware);
   app.use(responseMiddleware);
+
+  // validateWebhook
+  app.get("/facebook/webhook/verify", async ({ query }) => {
+    console.log({ query });
+    const { mode, token, challenge, verify_token } = query as { mode: string, token: string, challenge: string, verify_token: string };
+    const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);
+    return response;
+  });
   
   app.post("/login/facebook", async context => {
     const user = await userService.loginWithFacebook(context.query.token as string);
