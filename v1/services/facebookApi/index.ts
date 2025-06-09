@@ -130,35 +130,21 @@ class FacebookApiService extends BaseApiClient {
     return response.data || [];
   }
 
-  // ============= POST OPERATIONS =============
-  // async getPagePosts(accessToken: string, pageId: string, fields?: string, limit: number = 25): Promise<any[]> {
-  //   const url = this.buildApiUrl(`${pageId}/posts`, {
-  //     fields: fields || 'id,message,created_time,likes.summary(true),comments.summary(true),shares',
-  //     limit: limit.toString(),
-  //     access_token: accessToken,
-  //   });
+  async sendMessage(accessToken: string, pageId: string, recipientId: string, message: { text: string }): Promise<any> {
+    const url = this.buildApiUrl(`${pageId}/messages`, {
+      access_token: accessToken,
+    });
 
-  //   const response = await this.makeRequest<{ data: any[] }>(url);
-  //   return response.data || [];
-  // }
-
-  // async createPagePost(accessToken: string, pageId: string, message: string, link?: string, scheduledPublishTime?: number): Promise<{ id: string }> {
-  //   const postData: any = { message };
-  //   if (link) postData.link = link;
-  //   if (scheduledPublishTime) {
-  //     postData.scheduled_publish_time = scheduledPublishTime;
-  //     postData.published = false;
-  //   }
-
-  //   const url = this.buildApiUrl(`${pageId}/feed`, {
-  //     access_token: accessToken,
-  //   });
-
-  //   return await this.makeRequest<{ id: string }>(url, {
-  //     method: 'POST',
-  //     body: JSON.stringify(postData),
-  //   });
-  // }
+    return await this.makeRequest<any>(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        recipient: {
+          id: recipientId,
+        },
+        message,
+      }),
+    });
+  }
 
   // ============= UTILITY METHODS =============
   getAuthUrl(redirectUri: string, scopes: string[] = ['email', 'pages_show_list']): string {

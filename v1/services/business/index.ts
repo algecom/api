@@ -214,7 +214,6 @@ class BusinessService extends BaseApiClient {
     if(!message.text) throw new Error("Message is required");
     const business = await this.getBusinessInfoByFbPage(recipient);
     console.log({ business });
-    
     if (!business) throw new Error("Facebook page not found");
     if(business.status == 1) {
       const aiResponse = await this.makeRequest(process.env.AI_HOST as string, {
@@ -223,10 +222,12 @@ class BusinessService extends BaseApiClient {
           sender,
           recipient,
           message,
-          business
+          business,
+          conversation: []
         })
-      }); 
-      console.log({ aiResponse });      
+      });
+      const response = await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });
+      console.log({ aiResponse, response });      
     }
   };
 
@@ -239,6 +240,9 @@ class BusinessService extends BaseApiClient {
       return [ undefined, oldField ].includes(newField);
     });
     if (unchangedFields) throw new Error("No data to update");
+
+    if (data.status == 1 && !data.ai_system_prompt) throw new Error("Business information are required");
+
 
     if (data.ai_behaviour == 1 && !oldBusinessData.google_sheet_id) {
       const googleSheets = await userService.getGoogle(user_uid);
