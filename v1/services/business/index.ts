@@ -92,16 +92,18 @@ class BusinessService extends BaseApiClient {
     const result = await db`
       SELECT 
         b.*, 
-        bs.id AS google_sheet_id,
+        bu.user_uid,
+        bgs.id AS google_sheet_id,
         fp.id AS facebook_page_id, 
         fp.token AS facebook_page_token
       FROM businesses b
       JOIN facebook_pages fp ON fp.business_uid = b.uid
-      LEFT JOIN business_sheet bs ON bs.business_uid = b.uid
+      LEFT JOIN business_sheet bgs ON bgs.business_uid = b.uid
+      JOIN business_users bu ON bu.business_uid = b.uid
       WHERE fp.id = ${ id }
       LIMIT 1;
     `;
-    return result[ 0 ] as BusinessInfoJoin;
+    return result[ 0 ] as { user_uid: string } & BusinessInfoJoin;
   };
 
   async getBusinessesInfo(user_uid: string) {
@@ -247,7 +249,9 @@ class BusinessService extends BaseApiClient {
           recipient,
           message,
           business,
-          conversation: messages
+          conversation: messages,
+          products: await this.getProducts(business.user_uid, business.uid),
+          orders: await this.getOrders(business.user_uid, business.uid),
         })
       });
       await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });

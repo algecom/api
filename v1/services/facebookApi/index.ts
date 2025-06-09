@@ -12,7 +12,7 @@ class FacebookApiService extends BaseApiClient {
     pageMinimal: 'id,name,category,fan_count,picture',
     page: 'id,name,about,category,category_list,fan_count,followers_count,link,picture,cover,website,location,phone,emails,whatsapp_number,is_published,verification_status,description,mission,general_info,products,username',
     conversation: 'id,participants',
-    messages: 'message,from,to,created_time', // attachments
+    messages: 'message,attachments,from,to,created_time',
   };
 
   constructor(config: FacebookApiConfig) {
