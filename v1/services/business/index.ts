@@ -233,7 +233,7 @@ class BusinessService extends BaseApiClient {
 
   async updateInfo(user_uid:string, business_uid: string, data: BusinessDataUpdate) {
     const oldBusinessData = await this.getBusinessInfo(user_uid, business_uid);
-    if (!oldBusinessData) throw new Error("Business not found");
+    if (!oldBusinessData) throw new Error("oldBusinessData not found");
     const unchangedFields = Object.keys(data).every((field: string) => {
       const oldField = oldBusinessData[ field as keyof BusinessInfoJoin ];
       const newField = data[ field as keyof BusinessDataUpdate ];
@@ -241,8 +241,7 @@ class BusinessService extends BaseApiClient {
     });
     if (unchangedFields) throw new Error("No data to update");
 
-    if (data.status == 1 && !data.ai_system_prompt) throw new Error("Business information are required");
-
+    if (data.status == 1 && !oldBusinessData.ai_system_prompt) throw new Error("Business information are required");
 
     if (data.ai_behaviour == 1 && !oldBusinessData.google_sheet_id) {
       const googleSheets = await userService.getGoogle(user_uid);
