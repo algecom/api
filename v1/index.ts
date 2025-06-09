@@ -1,17 +1,11 @@
 import { Elysia } from "elysia";
 
-import FacebookApiService from "./services/facebookApi";
 import UserService from "./services/user";
 import BusinessService from "./services/business";
 import responseMiddleware from "./middleware/response";
 import { authMiddleware, refreshAuthJwtCookie, destroyAuthJwtCookie } from "./middleware/auth";
 import type { AuthJwtValue } from "./middleware/auth/types";
 import type { BusinessDataUpdate, ChatTestData } from "./services/business/types";
-
-const facebookApi = new FacebookApiService({
-  clientId: process.env.FB_CLIENT_ID as string,
-  clientSecret: process.env.FB_CLIENT_SECRET as string
-});
 
 const userService = new UserService();
 const businessService = new BusinessService();
@@ -26,17 +20,9 @@ const server = (app: Elysia) => {
     } = query as { 
       ["hub.mode"]: string, ["hub.challenge"]: string, ["hub.verify_token"]: string 
     };
-    const response = await facebookApi.validateWebhook(mode, verify_token, challenge);
-    console.log(response ? "Webhook validated successfully ✅" : "Webhook validation failed ❌");
-    return response;
-  });
-
-  app.post("/facebook/webhook", async ({ body, query }) => {
-    console.log({ body, query });
-    // const { mode, token, challenge, verify_token } = body as { mode: string, token: string, challenge: string, verify_token: string };
-    // const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);
-    // return response;
-    return;
+    const validation = (mode === 'subscribe' && verify_token === process.env.FB_VERIFY_WEBHOOK_TOKEN) ? challenge : null;
+    console.log(validation ? "Webhook validated successfully ✅" : "Webhook validation failed ❌");
+    return validation;
   });
   
   app.post("/login/facebook", async context => {
@@ -137,6 +123,14 @@ const server = (app: Elysia) => {
     const { uid } = params as { uid: string };
     const orders = await businessService.getOrders(user.uid, uid);    
     return orders;
+  });
+
+  app.post("/facebook/webhook", async ({ body, query }) => {
+    console.dir({ body, query }, { depth: null });
+    // const { mode, token, challenge, verify_token } = body as { mode: string, token: string, challenge: string, verify_token: string };
+    // const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);
+    // return response;
+    return;
   });
 
   return app;
