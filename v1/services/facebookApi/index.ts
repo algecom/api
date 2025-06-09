@@ -11,6 +11,8 @@ class FacebookApiService extends BaseApiClient {
     user: 'id,name,email,picture',
     pageMinimal: 'id,name,category,fan_count,picture',
     page: 'id,name,about,category,category_list,fan_count,followers_count,link,picture,cover,website,location,phone,emails,whatsapp_number,is_published,verification_status,description,mission,general_info,products,username',
+    conversation: 'id,participants',
+    messages: 'message', // message,attachments
   };
 
   constructor(config: FacebookApiConfig) {
@@ -147,19 +149,22 @@ class FacebookApiService extends BaseApiClient {
   }
 
   async getConversationId(accessToken: string, pageId: string, senderId: string): Promise<any> {
-    const url = this.buildApiUrl(`${pageId}/messages`, {
+    const url = this.buildApiUrl(`${pageId}/conversations`, {
       access_token: accessToken,
+      fields: this.fieldSets.conversation,
     });
 
     const response = await this.makeRequest<{ data: any[] }>(url);
     console.dir({ getConversation: response }, { depth: null });
     
-    return response.data.find((message: any) => message.sender.id == senderId) || null;
+    return response.data.find((conversation: any) => conversation.participants.data.find((participant: any) => participant.id == senderId))?.id || null;
   }
 
   async getConversationMessages(accessToken: string, conversationId: string): Promise<any[]> {
     const url = this.buildApiUrl(`${conversationId}/messages`, {
       access_token: accessToken,
+      fields: this.fieldSets.messages,
+      // limit: "50",
     });
 
     const response = await this.makeRequest<{ data: any[] }>(url);
