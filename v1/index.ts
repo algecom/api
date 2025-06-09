@@ -15,12 +15,7 @@ const server = (app: Elysia) => {
   app.use(responseMiddleware);
 
   app.get("/facebook/webhook", async ({ query }) => {
-    const { 
-      ["hub.mode"]: mode, ["hub.challenge"]: challenge, ["hub.verify_token"]: verify_token 
-    } = query as { 
-      ["hub.mode"]: string, ["hub.challenge"]: string, ["hub.verify_token"]: string 
-    };
-    const validation = (mode === 'subscribe' && verify_token === process.env.FB_VERIFY_WEBHOOK_TOKEN) ? challenge : null;
+    const validation = query["hub.mode"] === 'subscribe' && query["hub.verify_token"] === process.env.FB_VERIFY_WEBHOOK_TOKEN && query["hub.challenge"];
     console.log(validation ? "Webhook validated successfully ✅" : "Webhook validation failed ❌");
     return validation;
   });
@@ -125,11 +120,16 @@ const server = (app: Elysia) => {
     return orders;
   });
 
-  app.post("/facebook/webhook", async ({ body, query }) => {
-    console.dir({ body, query }, { depth: null });
+  app.post("/facebook/webhook", async ({ body }) => {
+    const { entry } = body as any;
+    const { sender, recipient, message } = entry?.[0]?.messaging?.[0];
+
+    const response = await businessService.chat(sender.id, recipient.id, message);
+    
     // const { mode, token, challenge, verify_token } = body as { mode: string, token: string, challenge: string, verify_token: string };
     // const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);
     // return response;
+    
     return;
   });
 

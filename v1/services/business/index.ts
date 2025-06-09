@@ -86,7 +86,23 @@ class BusinessService extends BaseApiClient {
       LIMIT 1;
     `;
     return result[ 0 ] as BusinessInfoJoin;
-  }
+  };
+
+  async getBusinessInfoByFbPage(id: string) {
+    const result = await db`
+      SELECT 
+        b.*, 
+        bs.id AS google_sheet_id,
+        fp.id AS facebook_page_id, 
+        fp.token AS facebook_page_token
+      FROM businesses b
+      JOIN facebook_pages fp ON fp.business_uid = b.uid
+      LEFT JOIN business_sheet bs ON bs.business_uid = b.uid
+      WHERE fp.id = ${ id }
+      LIMIT 1;
+    `;
+    return result[ 0 ] as BusinessInfoJoin;
+  };
 
   async getBusinessesInfo(user_uid: string) {
     const result = await db`
@@ -192,6 +208,26 @@ class BusinessService extends BaseApiClient {
       method: "POST",
       body: JSON.stringify(data)
     });
+  };
+
+  async chat(sender:string, recipient: string, message: { text?: string }) {
+    if(!message.text) throw new Error("Message is required");
+    const business = await this.getBusinessInfoByFbPage(recipient);
+    console.log({ business });
+    
+    if (!business) throw new Error("Facebook page not found");
+    if(business.status == 1) {
+      const aiResponse = await this.makeRequest(process.env.AI_HOST as string, {
+        method: "POST",
+        body: JSON.stringify({
+          sender,
+          recipient,
+          message,
+          business
+        })
+      }); 
+      console.log({ aiResponse });      
+    }
   };
 
   async updateInfo(user_uid:string, business_uid: string, data: BusinessDataUpdate) {
