@@ -9,7 +9,7 @@ export default (app: Elysia) => app
     error: error instanceof Error ? error.message : String(error)
   };
 
-  console.log({ response: result });
+  // console.dir({ response: result }, { depth: null });
 
   return result;
 })
@@ -46,7 +46,7 @@ export default (app: Elysia) => app
     data: response
   };
 
-  console.log({ response: result });
+  // console.dir({ response: result }, { depth: null });
 
   return result;
 });

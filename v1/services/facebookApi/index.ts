@@ -1,4 +1,4 @@
-import type { FacebookApiConfig, FacebookUser, FacebookPage, TokenInfo } from "./types";
+import type { FacebookApiConfig, FacebookUser, FacebookPage, TokenInfo, FormatedMessages } from "./types";
 import type { NewToken, OAuthTokens } from "../../types";
 import BaseApiClient from "../../plugins/baseApiClient";
 
@@ -12,7 +12,7 @@ class FacebookApiService extends BaseApiClient {
     pageMinimal: 'id,name,category,fan_count,picture',
     page: 'id,name,about,category,category_list,fan_count,followers_count,link,picture,cover,website,location,phone,emails,whatsapp_number,is_published,verification_status,description,mission,general_info,products,username',
     conversation: 'id,participants',
-    messages: 'message', // message,attachments
+    messages: 'message,from,to,created_time', // attachments
   };
 
   constructor(config: FacebookApiConfig) {
@@ -37,6 +37,22 @@ class FacebookApiService extends BaseApiClient {
   private buildApiUrl(endpoint: string, params: Record<string, string> = {}): string {
     const baseUrl = `${this.baseUrl}/${this.apiVersion}/${endpoint}`;
     return this.buildUrlWithParams(baseUrl, params);
+  }
+
+  private formateMessages(messages: any[]): FormatedMessages[] {
+    return messages.map((msg: any) => ({ 
+      message: { 
+        text: msg.message,
+        attachments: msg.attachments?.data.map((i: any) => ({
+          mime_type: i.mime_type,
+          size: i.size,
+          url: i.image_data?.url || i.file_url
+        }))
+      }, 
+      from: msg.from.name, 
+      to: msg.to.data.map((i: any) => i.name), 
+      created_time: msg.created_time 
+    })) || []
   }
 
   // ============= TOKEN OPERATIONS =============
@@ -155,12 +171,10 @@ class FacebookApiService extends BaseApiClient {
     });
 
     const response = await this.makeRequest<{ data: any[] }>(url);
-    console.dir({ getConversation: response }, { depth: null });
-    
     return response.data.find((conversation: any) => conversation.participants.data.find((participant: any) => participant.id == senderId))?.id || null;
   }
 
-  async getConversationMessages(accessToken: string, conversationId: string): Promise<any[]> {
+  async getConversationMessages(accessToken: string, conversationId: string): Promise<FormatedMessages[]> {
     const url = this.buildApiUrl(`${conversationId}/messages`, {
       access_token: accessToken,
       fields: this.fieldSets.messages,
@@ -168,9 +182,7 @@ class FacebookApiService extends BaseApiClient {
     });
 
     const response = await this.makeRequest<{ data: any[] }>(url);
-    console.dir({ getConversationMessages: response }, { depth: null });
-    
-    return response.data || [];
+    return this.formateMessages(response.data);
   }
 
   // ============= UTILITY METHODS =============

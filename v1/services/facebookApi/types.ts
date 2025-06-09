@@ -48,9 +48,24 @@ interface TokenInfo {
   user_id: string;
 }
 
+interface FormatedMessages {
+  message: {
+    text: string;
+    attachments?: {
+      mime_type: string;
+      size: number;
+      url: string;
+    }[];
+  };
+  from: string;
+  to: string[];
+  created_time: string;
+}
+
 export type {
   FacebookApiConfig,
   FacebookUser,
   FacebookPage,
-  TokenInfo
+  TokenInfo,
+  FormatedMessages
 };

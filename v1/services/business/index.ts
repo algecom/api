@@ -232,16 +232,13 @@ class BusinessService extends BaseApiClient {
   async chat(sender:string, recipient: string, message: { text?: string }) {
     if(!message.text) throw new Error("Message is required");
     const business = await this.getBusinessInfoByFbPage(recipient);
-    console.dir({ business }, { depth: null });
     if (!business) throw new Error("Facebook page not found");
     let conversation = await this.getBusinessFbConversation(business.uid, sender);
     if (!conversation) {
       const conversationId = await facebookApi.getConversationId(business.facebook_page_token, business.facebook_page_id, sender);
-      console.dir({ conversationId }, { depth: null });
       conversation = await this.insertBusinessFbConversation(business.uid, conversationId, sender);
     }
     const messages = await facebookApi.getConversationMessages(business.facebook_page_token, conversation.id);
-    console.dir({ messages }, { depth: null });
     if(business.status == 1) {
       const aiResponse = await this.makeRequest(process.env.AI_HOST as string, {
         method: "POST",
@@ -253,8 +250,7 @@ class BusinessService extends BaseApiClient {
           conversation: messages
         })
       });
-      const response = await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });
-      console.log({ aiResponse, response });      
+      await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });
     }
   };
 

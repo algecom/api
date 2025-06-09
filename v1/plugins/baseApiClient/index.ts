@@ -1,7 +1,7 @@
 abstract class BaseApiClient {
   protected async makeRequest<T>(url: string, options: RequestInit = {}): Promise<T> {
     try {
-      console.log({ url, options });
+      // console.dir({ url, options }, { depth: null });
       
       const response = await fetch(url, {
         ...options,
@@ -13,7 +13,7 @@ abstract class BaseApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as any;
-        console.log({ url, error: errorData });
+        // console.dir({ url, error: errorData }, { depth: null });
         
         throw new Error(
           errorData.error?.message ||
