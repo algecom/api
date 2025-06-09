@@ -120,6 +120,25 @@ class BusinessService extends BaseApiClient {
     return result as unknown as BusinessInfoJoin[];
   };
 
+  async getBusinessFbConversation(business_uid: string, senderId: string) {
+    const result = await db`
+      SELECT * FROM business_facebook_page_conversation
+      WHERE business_uid = ${ business_uid }
+      AND senderId = ${ senderId }
+      LIMIT 1;
+    `;
+    return result[ 0 ] as { id: string };
+  };
+
+  async insertBusinessFbConversation(business_uid: string, conversationId: string, senderId: string) {
+    const result = await db`
+      INSERT INTO business_facebook_page_conversation (business_uid, id, senderId)
+      VALUES (${ business_uid }, ${ conversationId }, ${ senderId })
+      RETURNING *;
+    `;
+    return result[ 0 ] as { id: string };
+  };
+
   async update(uid: string, data: BusinessDataUpdate) {
     const result = await db`
       UPDATE businesses SET 
@@ -213,8 +232,16 @@ class BusinessService extends BaseApiClient {
   async chat(sender:string, recipient: string, message: { text?: string }) {
     if(!message.text) throw new Error("Message is required");
     const business = await this.getBusinessInfoByFbPage(recipient);
-    console.log({ business });
+    console.dir({ business }, { depth: null });
     if (!business) throw new Error("Facebook page not found");
+    let conversation = await this.getBusinessFbConversation(business.uid, sender);
+    if (!conversation) {
+      const conversationId = await facebookApi.getConversationId(business.facebook_page_token, business.facebook_page_id, sender);
+      console.dir({ conversationId }, { depth: null });
+      conversation = await this.insertBusinessFbConversation(business.uid, conversationId, sender);
+    }
+    const messages = await facebookApi.getConversationMessages(business.facebook_page_token, conversation.id);
+    console.dir({ messages }, { depth: null });
     if(business.status == 1) {
       const aiResponse = await this.makeRequest(process.env.AI_HOST as string, {
         method: "POST",
@@ -223,7 +250,7 @@ class BusinessService extends BaseApiClient {
           recipient,
           message,
           business,
-          conversation: []
+          conversation: messages
         })
       });
       const response = await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });

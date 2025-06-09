@@ -146,6 +146,28 @@ class FacebookApiService extends BaseApiClient {
     });
   }
 
+  async getConversationId(accessToken: string, pageId: string, senderId: string): Promise<any> {
+    const url = this.buildApiUrl(`${pageId}/messages`, {
+      access_token: accessToken,
+    });
+
+    const response = await this.makeRequest<{ data: any[] }>(url);
+    console.dir({ getConversation: response }, { depth: null });
+    
+    return response.data.find((message: any) => message.sender.id == senderId) || null;
+  }
+
+  async getConversationMessages(accessToken: string, conversationId: string): Promise<any[]> {
+    const url = this.buildApiUrl(`${conversationId}/messages`, {
+      access_token: accessToken,
+    });
+
+    const response = await this.makeRequest<{ data: any[] }>(url);
+    console.dir({ getConversationMessages: response }, { depth: null });
+    
+    return response.data || [];
+  }
+
   // ============= UTILITY METHODS =============
   getAuthUrl(redirectUri: string, scopes: string[] = ['email', 'pages_show_list']): string {
     return this.buildUrlWithParams('https://www.facebook.com/v22.0/dialog/oauth', {

@@ -22,7 +22,6 @@ interface BusinessFacebookPage {
 interface BusinessUser {
   business_uid: string;
   user_uid: string;
-  role: string;
 };
 
 interface BusinessGoogleSheet {

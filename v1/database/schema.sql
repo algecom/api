@@ -45,3 +45,10 @@ CREATE TABLE business_sheet (
   business_uid UUID REFERENCES businesses(uid) ON DELETE CASCADE,
   id TEXT PRIMARY KEY
 );
+
+CREATE TABLE business_facebook_page_conversation (
+  business_uid UUID REFERENCES businesses(uid) ON DELETE CASCADE,
+  senderId TEXT NOT NULL,
+  id TEXT NOT NULL,
+  PRIMARY KEY (business_uid, id)
+);
