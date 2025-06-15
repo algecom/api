@@ -245,7 +245,16 @@ class BusinessService extends BaseApiClient {
         body: JSON.stringify({
           sender,
           recipient,
-          message,
+          message: {
+              ...message,
+              attachment: {
+                type: "image",
+                payload: {
+                  url: "https://photos.fife.usercontent.google.com/pw/AP1GczNJeysD939jDLVzfTPvtMqgAsbb5YtC3JWAPRMOhuMvCEn8HBWXfd0=w600-h600-s-no-gm?authuser=0",
+                  is_reusable: true
+                }
+              }
+          },
           business,
           conversation: messages,
           products: await this.getProducts(business.user_uid, business.uid),
