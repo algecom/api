@@ -233,7 +233,6 @@ class BusinessService extends BaseApiClient {
 
   async chat(sender:string, recipient: string, message: { text?: string }) {
     const business = await this.getBusinessInfoByFbPage(recipient);
-    if (!business) throw new Error("Facebook page not found");
     let conversation = await this.getBusinessFbConversation(business.uid, sender);
     if (!conversation) {
       const conversationId = await facebookApi.getConversationId(business.facebook_page_token, business.facebook_page_id, sender);
