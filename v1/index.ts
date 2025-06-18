@@ -6,6 +6,7 @@ import responseMiddleware from "./middleware/response";
 import { authMiddleware, refreshAuthJwtCookie, destroyAuthJwtCookie } from "./middleware/auth";
 import type { AuthJwtValue } from "./middleware/auth/types";
 import type { BusinessDataUpdate, ChatTestData } from "./services/business/types";
+import { mcp } from "./services/mcp";
 
 const userService = new UserService();
 const businessService = new BusinessService();
@@ -131,6 +132,12 @@ const server = (app: Elysia) => {
     // return response;
     
     return;
+  });
+
+  app.post("/mcp", async ({ body }) => {
+    const { prompt } = body as { prompt: string };
+    const response = await (await mcp()).askAI(prompt);
+    return response;
   });
 
   return app;
