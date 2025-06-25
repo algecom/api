@@ -11,7 +11,7 @@ const facebookApi = new FacebookApiService({
 });
 
 const tenDaysS: number = 10 * 24 * 60 * 60; // 10 days in seconds
-const publicRoutes: string[] = [ "", "/login/*", "/chat/test", "/facebook/webhook", "/mcp" ]; // without /v1/
+const publicRoutes: string[] = [ "", "/login/*", "/chat/test", "/facebook/webhook" ]; // without /v1/
 
 const cookieConfig: CookieOptions = {
   path: "/",

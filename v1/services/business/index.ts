@@ -1,10 +1,13 @@
 import db from "../../database";
 import UserService from "../user";
+import MCPService from "../mcp";
 import GoogleApiService from "../googleApi";
 import FacebookApiService from "../facebookApi";
 import BaseApiClient from "../../plugins/baseApiClient";
 import type { Business, BusinessUser, BusinessInfo, BusinessFacebookPage, BusinessInfoJoin, BusinessDataUpdate, ChatTestData } from "./types";
 import type { GoogleSpreadsheet } from "../googleApi/types";
+import type { GeminiContent } from "../mcp/types";
+import type { NewToken } from "../../types";
 
 const facebookApi = new FacebookApiService({
   clientId: process.env.FB_CLIENT_ID as string,
@@ -33,10 +36,10 @@ class BusinessService extends BaseApiClient {
     return result[ 0 ] as Business;
   };
 
-  async insertFbPage(business_uid: string, token: string, id: string) {
+  async insertFbPage(business_uid: string, token: string, expires_at: number, id: string) {
     const result = await db`
-      INSERT INTO facebook_pages (business_uid, token, id) 
-      VALUES (${ business_uid }, ${ token }, ${ id })
+      INSERT INTO facebook_pages (business_uid, token, id, expires_at) 
+      VALUES (${ business_uid }, ${ token }, ${ id }, ${ new Date(expires_at * 1000).toJSON() })
       RETURNING *;
     `;
     return result[ 0 ] as BusinessFacebookPage;
@@ -58,6 +61,21 @@ class BusinessService extends BaseApiClient {
       RETURNING *;
     `;
     return result[ 0 ] as BusinessUser;
+  };
+
+  async updateFbToken(business_uid: string, token: NewToken) {
+    console.log({ 
+      business_uid,
+      token,
+      expires_at: new Date(token.expires_at * 1000).toJSON() });
+    const result = await db`
+      UPDATE facebook_pages
+      SET token = ${ token.value }, expires_at = ${ new Date(token.expires_at * 1000).toJSON() }
+      WHERE business_uid = ${ business_uid }
+      RETURNING *;
+    `;
+    console.log({ result });
+    return result[ 0 ] as BusinessFacebookPage;
   };
 
   async get(uid: string) {
@@ -168,7 +186,7 @@ class BusinessService extends BaseApiClient {
 
     const business = await this.insert(ai_behaviour);
     await this.insertBusinessUser(business.uid, user_uid);
-    await this.insertFbPage(business.uid, exchangeToken.access_token, page_id);
+    await this.insertFbPage(business.uid, exchangeToken.access_token, exchangeToken.expires_in as number, page_id);
 
     const businessInfo: BusinessInfo = { ...business, facebook: page, google: {} };
 
@@ -213,22 +231,49 @@ class BusinessService extends BaseApiClient {
     if(data.conversation.length > 100) throw new Error("Conversation is too long (max 100 messages)");
     if(data.message.text.length > 500) throw new Error("Message is too long (max 500 characters)");
     if(!data.message.text) throw new Error("Message is required");
-    data.testAiSystemPrompt = process.env.APP_INFORMATION as string;
-    return await this.makeRequest(process.env.AI_HOST as string, {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
+
+    const conversation: GeminiContent[] = [
+      ...data.conversation.map((message) => ({ 
+        role: message.role as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: message.content.text 
+        }]
+      })),
+      { 
+        role: "user" as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: data.message.text 
+        }]
+      } 
+    ];
+
+    const mcpService = new MCPService({ type: "app" }, conversation);
+    return await mcpService.callAI();
   };
 
   async chatTest(user_uid:string, business_uid: string, data: ChatTestData) {
     if(data.conversation.length > 100) throw new Error("Conversation is too long (max 100 messages)");
     if(data.message.text.length > 500) throw new Error("Message is too long (max 500 characters)");
     if(!data.message.text) throw new Error("Message is required");
-    if(!data.testAiSystemPrompt) throw new Error("Business information are required");
-    return await this.makeRequest(process.env.AI_HOST as string, {
-      method: "POST",
-      body: JSON.stringify(data)
-    });
+    if(!data.testAiSystemPrompt) throw new Error("Business information are required");  
+    
+    const conversation: GeminiContent[] = [
+      ...data.conversation.map((message) => ({ 
+        role: message.role as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: message.content.text 
+        }]
+      })),
+      { 
+        role: "user" as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: data.message.text 
+        }]
+      } 
+    ];
+
+    const mcpService = new MCPService({ type: "business", user_uid, business_uid }, conversation, data.testAiSystemPrompt);
+    return await mcpService.callAI();
   };
 
   async chat(sender:string, recipient: string, message: { text?: string }) {
@@ -240,27 +285,23 @@ class BusinessService extends BaseApiClient {
     }
     const messages = await facebookApi.getConversationMessages(business.facebook_page_token, conversation.id);
     if(business.status == 1) {
-      const aiResponse = await this.makeRequest(process.env.AI_HOST as string, {
-        method: "POST",
-        body: JSON.stringify({
-          sender,
-          recipient,
-          message: {
-              ...message,
-              attachment: {
-                type: "image",
-                payload: {
-                  url: "https://photos.fife.usercontent.google.com/pw/AP1GczNJeysD939jDLVzfTPvtMqgAsbb5YtC3JWAPRMOhuMvCEn8HBWXfd0=w600-h600-s-no-gm?authuser=0",
-                  is_reusable: true
-                }
-              }
-          },
-          business,
-          conversation: messages,
-          products: await this.getProducts(business.user_uid, business.uid),
-          orders: await this.getOrders(business.user_uid, business.uid),
-        })
-      });
+      const conversation: GeminiContent[] = [
+        ...messages.map((message) => ({ 
+          role: message.from == sender ? "model" : "user" as GeminiContent[ "role" ], 
+          parts: [{ 
+            text: message.message.text 
+          }]
+        })),
+        { 
+          role: "user" as GeminiContent[ "role" ], 
+          parts: [{ 
+            text: message.text 
+          }]
+        } 
+      ];
+
+      const mcpService = new MCPService({ type: "business", user_uid: business.user_uid, business_uid: business.uid }, conversation, business.ai_system_prompt);
+      const aiResponse = await mcpService.callAI();
       await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });
     }
   };
@@ -310,6 +351,22 @@ class BusinessService extends BaseApiClient {
     const orders = await googleApi.getSheetOrders(userGoogle, business.google_sheet_id);
     return googleApi.formatSheetsData(orders);
   };
+
+  async refreshFacebookTokens() {
+    const tenDaysS: number = 10 * 24 * 60 * 60; // 10 days in seconds
+    const businesses: BusinessFacebookPage[] = await db`
+      SELECT * 
+      FROM facebook_pages 
+      WHERE expires_at < ${ new Date(Date.now() + tenDaysS).toJSON() };
+    `;
+    for (const business of businesses) {
+      const newToken = await facebookApi.exchangeAndVerifyToken(business.token as string);
+      await this.updateFbToken(business.business_uid, newToken);
+      console.log({ type: "facebook", business_uid: business.business_uid });
+    }
+    return businesses;
+  };
+
 };
 
 export default BusinessService;

@@ -73,7 +73,7 @@ class GoogleApi extends BaseApiClient {
         grant_type: 'refresh_token',
       }),
     });
-    await userService.updateGoogleToken(response.access_token, refreshToken);
+    await userService.updateGoogleToken({ value: response.access_token, expires_at: response.expires_in as number }, refreshToken);
     return response.access_token;
   }
 

@@ -6,7 +6,6 @@ import responseMiddleware from "./middleware/response";
 import { authMiddleware, refreshAuthJwtCookie, destroyAuthJwtCookie } from "./middleware/auth";
 import type { AuthJwtValue } from "./middleware/auth/types";
 import type { BusinessDataUpdate, ChatTestData } from "./services/business/types";
-import { mcp } from "./services/mcp";
 
 const userService = new UserService();
 const businessService = new BusinessService();
@@ -96,6 +95,7 @@ const server = (app: Elysia) => {
     const { uid } = params as { uid: string };
     const data = body as ChatTestData;
     const response = await businessService.chatTest(user.uid, uid, data);
+    console.dir({ response }, { depth: null });
     return response;
   });
 
@@ -134,12 +134,19 @@ const server = (app: Elysia) => {
     return;
   });
 
-  app.post("/mcp", async ({ body }) => {
-    const { prompt } = body as { prompt: string };
-    const response = await (await mcp()).askAI(prompt);
-    return response;
+  // cron jobs will call these endpoints to refresh tokens every 1 day
+  app.get("/refresh/facebook/tokens", async () => {
+    await userService.refreshFacebookTokens();
+    await businessService.refreshFacebookTokens();
+    return;
   });
 
+  // cron jobs will call these endpoints to refresh tokens every 20 minutes
+  app.get("/refresh/google/tokens", async () => {
+    await userService.refreshGoogleTokens();
+    return;
+  });
+  
   return app;
 };
 

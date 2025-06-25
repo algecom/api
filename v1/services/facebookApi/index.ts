@@ -1,4 +1,4 @@
-import type { FacebookApiConfig, FacebookUser, FacebookPage, TokenInfo, FormatedMessages } from "./types";
+import type { FacebookApiConfig, FacebookUser, FacebookPage, TokenInfo, FormatedFacebookMessages, FacebookMessageHistoryResponse, FacebookMessageHistory } from "./types";
 import type { NewToken, OAuthTokens } from "../../types";
 import BaseApiClient from "../../plugins/baseApiClient";
 
@@ -39,18 +39,18 @@ class FacebookApiService extends BaseApiClient {
     return this.buildUrlWithParams(baseUrl, params);
   }
 
-  private formateMessages(messages: any[]): FormatedMessages[] {
-    return messages.map((msg: any) => ({ 
+  private formateMessages(messages: FacebookMessageHistory[]): FormatedFacebookMessages[] {
+    return messages.map((msg) => ({ 
       message: { 
-        text: msg.message,
-        attachments: msg.attachments?.data.map((i: any) => ({
-          mime_type: i.mime_type,
-          size: i.size,
-          url: i.image_data?.url || i.file_url
-        }))
+        text: msg.message!,
+        attachments: msg.attachments?.data.map((i) => ({
+          mime_type: i.mime_type!,
+          size: i.size!,
+          url: i.image_data?.url || i.file_url!
+        })) || [],
       }, 
-      from: msg.from.name, 
-      to: msg.to.data.map((i: any) => i.name), 
+      from: msg.from.id, 
+      to: msg.to?.data.map((i) => i.id)!, 
       created_time: msg.created_time 
     })) || []
   }
@@ -174,14 +174,14 @@ class FacebookApiService extends BaseApiClient {
     return response.data.find((conversation: any) => conversation.participants.data.find((participant: any) => participant.id == senderId))?.id || null;
   }
 
-  async getConversationMessages(accessToken: string, conversationId: string): Promise<FormatedMessages[]> {
+  async getConversationMessages(accessToken: string, conversationId: string): Promise<FormatedFacebookMessages[]> {
     const url = this.buildApiUrl(`${conversationId}/messages`, {
       access_token: accessToken,
       fields: this.fieldSets.messages,
       // limit: "50",
     });
 
-    const response = await this.makeRequest<{ data: any[] }>(url);
+    const response = await this.makeRequest<FacebookMessageHistoryResponse>(url);
     return this.formateMessages(response.data);
   }
 

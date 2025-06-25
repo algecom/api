@@ -52,4 +52,9 @@ interface ChatTestData {
   testAiSystemPrompt: string
 }
 
-export type { Business, BusinessFacebookPage, BusinessUser, BusinessInfo, BusinessInfoJoin, BusinessGoogleSheet, BusinessDataUpdate, ChatTestData };
+interface MessageResponse {
+  text: string;
+  total_token_count: number;
+}
+
+export type { Business, BusinessFacebookPage, BusinessUser, BusinessInfo, BusinessInfoJoin, BusinessGoogleSheet, BusinessDataUpdate, ChatTestData, MessageResponse };

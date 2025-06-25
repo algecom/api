@@ -2,7 +2,7 @@ import db from "../../database";
 import GoogleApi from "../googleApi";
 import FacebookApiService from "../facebookApi";
 import type { GoogleUser } from "../googleApi/types";
-import type { OAuthTokens } from "../../types";
+import type { NewToken, OAuthTokens } from "../../types";
 import type { User, UserFacebook, LoggedWithFacebook, UserGoogle } from "./types";
 
 const facebookApi = new FacebookApiService({
@@ -28,19 +28,19 @@ class UserService {
     return result[ 0 ] as User;
   };
 
-  async insertFb({ user_uid, token, id }: UserFacebook) {
+  async insertFb({ user_uid, token, id, expires_at }: UserFacebook & { expires_at: number }) {
     const result = await db`
-      INSERT INTO facebook_users (user_uid, token, id) 
-      VALUES (${user_uid}, ${token}, ${id})
+      INSERT INTO facebook_users (user_uid, token, id, expires_at) 
+      VALUES (${user_uid}, ${token}, ${id}, ${new Date(expires_at * 1000).toJSON()})
       RETURNING *;
     `;
     return result[ 0 ] as UserFacebook;
   };
 
-  async insertGoogleSheets(user_uid: string, { access_token, refresh_token }: OAuthTokens) {
+  async insertGoogleSheets(user_uid: string, { access_token, refresh_token, expires_in }: OAuthTokens) {
     const result = await db`
-      INSERT INTO google_sheets (user_uid, token, refresh_token)
-      VALUES (${user_uid}, ${access_token}, ${refresh_token as string})
+      INSERT INTO google_sheets (user_uid, token, refresh_token, expires_at)
+      VALUES (${user_uid}, ${access_token}, ${refresh_token as string}, ${new Date(Date.now() + (expires_in as number * 1000)).toJSON()})
       ON CONFLICT (user_uid)
       DO UPDATE SET token = EXCLUDED.token, refresh_token = EXCLUDED.refresh_token
       RETURNING *;
@@ -68,20 +68,25 @@ class UserService {
     return result[ 0 ] as UserGoogle;
   };
 
-  async updateFbToken(uid: string, token: string) {
+  async updateFbToken(uid: string, token: NewToken) {
+    console.log({ 
+      uid,
+      token,
+      expires_at: new Date(token.expires_at * 1000).toJSON() });
     const result = await db`
       UPDATE facebook_users
-      SET token = ${ token }
-      WHERE user_uid = ${ uid }
+      SET token = ${ token.value }, expires_at = ${ new Date(token.expires_at * 1000).toJSON() }
+      WHERE id = ${ uid }
       RETURNING *;
     `;
+    console.log({ result });
     return result[ 0 ] as UserFacebook;
   };
 
-  async updateGoogleToken(token: string, refresh_token: string) {
+  async updateGoogleToken(token: NewToken, refresh_token: string) {
     const result = await db`
       UPDATE google_sheets
-      SET token = ${ token }
+      SET token = ${ token.value }, expires_at = ${ new Date(Date.now() + token.expires_at).toJSON() }
       WHERE refresh_token = ${ refresh_token }
       RETURNING *;
     `;
@@ -90,7 +95,7 @@ class UserService {
 
   async loginWithFacebook(token: string): Promise<LoggedWithFacebook> {
     const userFromFb = await facebookApi.getUser(token);
-    const newToken = await facebookApi.exchangeAndVerifyToken(token);
+    const newToken = await facebookApi.exchangeAndVerifyToken(token);    
 
     const fbUser = await this.getFb(userFromFb.id);
 
@@ -100,12 +105,12 @@ class UserService {
       facebook: userFromFb,
     };
 
-    if (!fbUser?.user_uid) { // If the user does not exist, create it.
+    if (!fbUser?.user_uid) {
       const newUser = await this.insert();
-      const newFbUser = await this.insertFb({ user_uid: newUser.uid, token: newToken.value, id: userFromFb.id });
+      const newFbUser = await this.insertFb({ user_uid: newUser.uid, token: newToken.value, id: userFromFb.id, expires_at: newToken.expires_at });
       loggedUser.uid = newFbUser.user_uid;
     }
-    else await this.updateFbToken(fbUser.user_uid, newToken.value);
+    else await this.updateFbToken(fbUser.id, newToken);
 
     return loggedUser;
   };
@@ -139,6 +144,35 @@ class UserService {
       return userGoogle;
     }
     return undefined;
+  };
+
+  async refreshFacebookTokens() {
+    const tenDaysS: number = 10 * 24 * 60 * 60; // 10 days in seconds
+    const users: UserFacebook[] = await db`
+      SELECT * 
+      FROM facebook_users 
+      WHERE expires_at < ${ new Date(Date.now() + tenDaysS).toJSON() };
+    `;
+    for (const user of users) {
+      const newToken = await facebookApi.exchangeAndVerifyToken(user.token as string);
+      await this.updateFbToken(user.user_uid, newToken);
+      console.log({ type: "facebook", user_uid: user.user_uid });
+    }
+    return users;
+  };
+
+  async refreshGoogleTokens() {
+    const tenMinutesS: number = 10 * 60; // 10 minutes in seconds
+    const users: UserGoogle[] = await db`
+      SELECT * 
+      FROM google_sheets 
+      WHERE expires_at < ${ new Date(Date.now() + tenMinutesS).toJSON() };
+    `;
+    for (const user of users) {
+      await googleApi.refreshAccessToken(user.refresh_token as string);
+      console.log({ type: "google", user_uid: user.user_uid });
+    }
+    return users;
   };
 };
 

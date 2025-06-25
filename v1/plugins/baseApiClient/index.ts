@@ -25,10 +25,8 @@ abstract class BaseApiClient {
 
       return await response.json() as T;
     } catch (error) {
-      if (error instanceof Error) {
-        throw error;
-      }
-      throw new Error(`Request failed: ${JSON.stringify(error)}`);
+      if (error instanceof Error) throw error;
+      throw new Error(`Request failed: ${ JSON.stringify(error) }`);
     }
   }
 
