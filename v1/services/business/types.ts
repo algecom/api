@@ -4,6 +4,7 @@ import type { GoogleSpreadsheet } from "../googleApi/types";
 interface BusinessDataUpdate {
   ai_behaviour: number;
   ai_system_prompt: string;
+  ai_tokens_count: number;
   status: number;
 };
 

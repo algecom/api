@@ -36,10 +36,10 @@ class BusinessService extends BaseApiClient {
     return result[ 0 ] as Business;
   };
 
-  async insertFbPage(business_uid: string, token: string, expires_at: number, id: string) {
+  async insertFbPage(business_uid: string, token: string, id: string) {
     const result = await db`
-      INSERT INTO facebook_pages (business_uid, token, id, expires_at) 
-      VALUES (${ business_uid }, ${ token }, ${ id }, ${ new Date(expires_at * 1000).toJSON() })
+      INSERT INTO facebook_pages (business_uid, token, id) 
+      VALUES (${ business_uid }, ${ token }, ${ id })
       RETURNING *;
     `;
     return result[ 0 ] as BusinessFacebookPage;
@@ -63,20 +63,15 @@ class BusinessService extends BaseApiClient {
     return result[ 0 ] as BusinessUser;
   };
 
-  async updateFbToken(business_uid: string, token: NewToken) {
-    console.log({ 
-      business_uid,
-      token,
-      expires_at: new Date(token.expires_at * 1000).toJSON() });
-    const result = await db`
-      UPDATE facebook_pages
-      SET token = ${ token.value }, expires_at = ${ new Date(token.expires_at * 1000).toJSON() }
-      WHERE business_uid = ${ business_uid }
-      RETURNING *;
-    `;
-    console.log({ result });
-    return result[ 0 ] as BusinessFacebookPage;
-  };
+  // async updateFbToken(business_uid: string, token: NewToken) {
+  //   const result = await db`
+  //     UPDATE facebook_pages
+  //     SET token = ${ token.value }
+  //     WHERE business_uid = ${ business_uid }
+  //     RETURNING *;
+  //   `;
+  //   return result[ 0 ] as BusinessFacebookPage;
+  // };
 
   async get(uid: string) {
     const result = await db`SELECT * FROM businesses WHERE uid = ${ uid }`;
@@ -186,8 +181,7 @@ class BusinessService extends BaseApiClient {
 
     const business = await this.insert(ai_behaviour);
     await this.insertBusinessUser(business.uid, user_uid);
-    await this.insertFbPage(business.uid, exchangeToken.access_token, exchangeToken.expires_in as number, page_id);
-
+    await this.insertFbPage(business.uid, exchangeToken.access_token, page_id);
     const businessInfo: BusinessInfo = { ...business, facebook: page, google: {} };
 
     if (ai_behaviour == 1) {
@@ -248,6 +242,7 @@ class BusinessService extends BaseApiClient {
     ];
 
     const mcpService = new MCPService({ type: "app" }, conversation);
+    // await this.updateTokenCount("", 1);
     return await mcpService.callAI();
   };
 
@@ -273,7 +268,9 @@ class BusinessService extends BaseApiClient {
     ];
 
     const mcpService = new MCPService({ type: "business", user_uid, business_uid }, conversation, data.testAiSystemPrompt);
-    return await mcpService.callAI();
+    const aiResponse = await mcpService.callAI();
+    await this.updateTokenCount(business_uid, aiResponse.total_token_count);
+    return aiResponse;
   };
 
   async chat(sender:string, recipient: string, message: { text?: string }) {
@@ -284,6 +281,9 @@ class BusinessService extends BaseApiClient {
       conversation = await this.insertBusinessFbConversation(business.uid, conversationId, sender);
     }
     const messages = await facebookApi.getConversationMessages(business.facebook_page_token, conversation.id);
+
+    console.dir({ sender, recipient, message, messages }, { depth: null });
+    
     if(business.status == 1) {
       const conversation: GeminiContent[] = [
         ...messages.map((message) => ({ 
@@ -300,8 +300,11 @@ class BusinessService extends BaseApiClient {
         } 
       ];
 
+      console.dir({ conversation }, { depth: null });
+
       const mcpService = new MCPService({ type: "business", user_uid: business.user_uid, business_uid: business.uid }, conversation, business.ai_system_prompt);
       const aiResponse = await mcpService.callAI();
+      await this.updateTokenCount(business.uid, aiResponse.total_token_count);
       await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });
     }
   };
@@ -352,30 +355,15 @@ class BusinessService extends BaseApiClient {
     return googleApi.formatSheetsData(orders);
   };
 
-  async refreshFacebookTokens() {
-    const tenDaysS: number = 10 * 24 * 60 * 60; // 10 days in seconds
-    const businesses: BusinessFacebookPage[] = await db`
-      SELECT * 
-      FROM facebook_pages 
-      WHERE expires_at < ${ new Date(Date.now() + tenDaysS).toJSON() };
+  async updateTokenCount(business_uid: string, tokenCount: number) {
+    const business = await db`
+      UPDATE businesses
+      SET ai_tokens_count = ai_tokens_count + ${ tokenCount }
+      WHERE uid = ${ business_uid }
+      RETURNING *;
     `;
 
-    const response = {
-      table: "facebook_pages",
-      total: businesses.length,
-      updated: [] as string[],
-      failed: [] as string[],
-      percentage: 0,
-    };
-
-    for (const business of businesses) {
-      const newToken = await facebookApi.exchangeAndVerifyToken(business.token as string);
-      const updatedBusiness = await this.updateFbToken(business.business_uid, newToken);
-      if(updatedBusiness) response.updated.push(business.business_uid);
-      else response.failed.push(business.business_uid);
-    }
-    response.percentage = response.updated.length / response.total * 100;
-    return response;
+    return business[ 0 ] as Business;
   };
 
 };
