@@ -253,18 +253,18 @@ class BusinessService extends BaseApiClient {
     if(!data.testAiSystemPrompt) throw new Error("Business information are required");  
     
     const conversation: GeminiContent[] = [
-      ...data.conversation.map((message) => ({ 
-        role: message.role as GeminiContent[ "role" ], 
-        parts: [{ 
-          text: message.content.text 
-        }]
-      })),
       { 
         role: "user" as GeminiContent[ "role" ], 
         parts: [{ 
           text: data.message.text 
         }]
-      } 
+      },
+      ...data.conversation.map((message) => ({ 
+        role: message.role as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: message.content.text 
+        }]
+      }))
     ];
 
     const mcpService = new MCPService({ type: "business", user_uid, business_uid }, conversation, data.testAiSystemPrompt);
@@ -284,20 +284,15 @@ class BusinessService extends BaseApiClient {
 
     console.dir({ sender, recipient, message, messages }, { depth: null });
     
-    if(business.status == 1) {
+    if(business.status == 0) return;
+    else {
       const conversation: GeminiContent[] = [
-        ...messages.map((message) => ({ 
-          role: message.from == sender ? "model" : "user" as GeminiContent[ "role" ], 
+        ...messages.map((e) => ({ 
+          role: e.from == sender ? "user" : "model" as GeminiContent[ "role" ], 
           parts: [{ 
-            text: message.message.text 
+            text: e.message.text 
           }]
-        })),
-        { 
-          role: "user" as GeminiContent[ "role" ], 
-          parts: [{ 
-            text: message.text 
-          }]
-        } 
+        }))
       ];
 
       console.dir({ conversation }, { depth: null });

@@ -129,7 +129,7 @@ class MCPService extends BaseApiClient {
         }
       );
 
-      // console.dir({ response }, { depth: null });
+      console.dir({ response }, { depth: null });
 
       if (response.promptFeedback?.blockReason) throw new Error("Gemini API error: " + response.promptFeedback.blockReason);
 
@@ -146,6 +146,7 @@ class MCPService extends BaseApiClient {
 
   async callAI(): Promise<MessageResponse> {
     const response = await this.useGemini();
+    console.dir({ total_token_count: this.total_token_count }, { depth: null });
     return {
       text: response.text || "",
       total_token_count: this.total_token_count
