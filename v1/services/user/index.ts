@@ -142,11 +142,11 @@ class UserService {
   };
 
   async refreshFacebookTokens() {
-    const tenDaysS: number = 10 * 24 * 60 * 60 * 1000; // 10 days in milliseconds
+    const tenDaysMs: number = 10 * 24 * 60 * 60 * 1000; // 10 days in milliseconds
     const users: UserFacebook[] = await db`
       SELECT * 
       FROM facebook_users 
-      WHERE expires_at < ${ new Date(Date.now() + tenDaysS).toJSON() };
+      WHERE expires_at < ${ new Date(Date.now() + tenDaysMs).toJSON() };
     `;
 
     const response = {
@@ -169,11 +169,11 @@ class UserService {
   };
 
   async refreshGoogleTokens() {
-    const tenMinutesS: number = 10 * 60 * 1000; // 10 minutes in milliseconds
+    const twentyMinutesMs: number = 20 * 60 * 1000; // 20 minutes in milliseconds
     const users: UserGoogle[] = await db`
       SELECT * 
       FROM google_sheets 
-      WHERE expires_at < ${ new Date(Date.now() + tenMinutesS).toJSON() };
+      WHERE expires_at < ${ new Date(Date.now() + twentyMinutesMs).toJSON() };
     `;
 
     const response = {
