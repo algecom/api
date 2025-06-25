@@ -77,7 +77,7 @@ class MCPService extends BaseApiClient {
     let results: GeminiPart[] = [];
     let functionConversation: GeminiContent[] = [];
 
-    console.dir({ candidates }, { depth: null });
+    // console.dir({ candidates }, { depth: null });
 
     for (const candidate of candidates) {
       if (candidate.content?.parts) {
@@ -119,7 +119,7 @@ class MCPService extends BaseApiClient {
       };
 
       // console.dir({ request }, { depth: null });
-      console.dir({ contents: request.contents }, { depth: null });
+      // console.dir({ contents: request.contents }, { depth: null });
 
       const response = await this.makeRequest<GeminiResponse>(
         `https://generativelanguage.googleapis.com/v1beta/models/${ process.env.GEMINI_MODEL }?key=${ process.env.GEMINI_API_KEY }`,
@@ -129,7 +129,7 @@ class MCPService extends BaseApiClient {
         }
       );
 
-      console.dir({ response }, { depth: null });
+      // console.dir({ response }, { depth: null });
 
       if (response.promptFeedback?.blockReason) throw new Error("Gemini API error: " + response.promptFeedback.blockReason);
 
@@ -146,7 +146,7 @@ class MCPService extends BaseApiClient {
 
   async callAI(): Promise<MessageResponse> {
     const response = await this.useGemini();
-    console.dir({ total_token_count: this.total_token_count }, { depth: null });
+    
     return {
       text: response.text || "",
       total_token_count: this.total_token_count

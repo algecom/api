@@ -57,8 +57,6 @@ class GoogleApi extends BaseApiClient {
     };
     const formData = this.createFormData(data);
 
-    console.log({ data, formData });
-
     return await this.makeRequest<OAuthTokens>(`${this.oauthUrl}/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

@@ -253,18 +253,18 @@ class BusinessService extends BaseApiClient {
     if(!data.testAiSystemPrompt) throw new Error("Business information are required");  
     
     const conversation: GeminiContent[] = [
-      { 
-        role: "user" as GeminiContent[ "role" ], 
-        parts: [{ 
-          text: data.message.text 
-        }]
-      },
       ...data.conversation.map((message) => ({ 
         role: message.role as GeminiContent[ "role" ], 
         parts: [{ 
           text: message.content.text 
         }]
-      }))
+      })),      
+      { 
+        role: "user" as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: data.message.text 
+        }]
+      }
     ];
 
     const mcpService = new MCPService({ type: "business", user_uid, business_uid }, conversation, data.testAiSystemPrompt);
@@ -282,20 +282,18 @@ class BusinessService extends BaseApiClient {
     }
     const messages = await facebookApi.getConversationMessages(business.facebook_page_token, conversation.id);
 
-    console.dir({ sender, recipient, message, messages }, { depth: null });
+    // console.dir({ sender, recipient, message, messages }, { depth: null });
     
     if(business.status == 0) return;
     else {
-      const conversation: GeminiContent[] = [
-        ...messages.map((e) => ({ 
-          role: e.from == sender ? "user" : "model" as GeminiContent[ "role" ], 
-          parts: [{ 
-            text: e.message.text 
-          }]
-        }))
-      ];
+      const conversation: GeminiContent[] = messages.map((e) => ({ 
+        role: e.from == sender ? "user" : "model" as GeminiContent[ "role" ], 
+        parts: [{ 
+          text: e.message.text 
+        }]
+      })).reverse();
 
-      console.dir({ conversation }, { depth: null });
+      // console.dir({ conversation }, { depth: null });
 
       const mcpService = new MCPService({ type: "business", user_uid: business.user_uid, business_uid: business.uid }, conversation, business.ai_system_prompt);
       const aiResponse = await mcpService.callAI();

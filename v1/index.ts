@@ -95,7 +95,7 @@ const server = (app: Elysia) => {
     const { uid } = params as { uid: string };
     const data = body as ChatTestData;
     const response = await businessService.chatTest(user.uid, uid, data);
-    console.dir({ response }, { depth: null });
+    // console.dir({ response }, { depth: null });
     return response;
   });
 
