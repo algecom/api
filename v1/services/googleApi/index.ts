@@ -48,16 +48,21 @@ class GoogleApi extends BaseApiClient {
 
   // ============= AUTHENTICATION =============
   async exchangeCodeForTokens(code: string): Promise<OAuthTokens> {
+    const data = {
+      code,
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      redirect_uri: this.config.redirectUri,
+      grant_type: 'authorization_code',
+    };
+    const formData = this.createFormData(data);
+
+    console.log({ data, formData });
+
     return await this.makeRequest<OAuthTokens>(`${this.oauthUrl}/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: this.createFormData({
-        code,
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        redirect_uri: this.config.redirectUri,
-        grant_type: 'authorization_code',
-      }),
+      body: formData,
     });
   }
 
