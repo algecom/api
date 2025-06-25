@@ -81,7 +81,7 @@ class UserService {
   async updateGoogleToken(token: NewToken, refresh_token: string) {
     const result = await db`
       UPDATE google_sheets
-      SET token = ${ token.value }, expires_at = ${ Date.now() + token.expires_at }
+      SET token = ${ token.value }, expires_at = ${ new Date(Date.now() + (token.expires_at * 1000)).toJSON() }
       WHERE refresh_token = ${ refresh_token }
       RETURNING *;
     `;
