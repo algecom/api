@@ -300,7 +300,7 @@ class BusinessService extends BaseApiClient {
       const mcpService = new MCPService({ type: "business", user_uid: business.user_uid, business_uid: business.uid }, conversation, business.ai_system_prompt);
       const aiResponse = await mcpService.callAI();
       await this.updateTokenCount(business.uid, aiResponse.total_token_count);
-      await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, aiResponse as { text: string });
+      await facebookApi.sendMessage(business.facebook_page_token, business.facebook_page_id, sender, { text: aiResponse.text } as { text: string });
     }
   };
 
