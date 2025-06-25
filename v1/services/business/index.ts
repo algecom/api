@@ -359,12 +359,23 @@ class BusinessService extends BaseApiClient {
       FROM facebook_pages 
       WHERE expires_at < ${ new Date(Date.now() + tenDaysS).toJSON() };
     `;
+
+    const response = {
+      table: "facebook_pages",
+      total: businesses.length,
+      updated: [] as string[],
+      failed: [] as string[],
+      percentage: 0,
+    };
+
     for (const business of businesses) {
       const newToken = await facebookApi.exchangeAndVerifyToken(business.token as string);
-      await this.updateFbToken(business.business_uid, newToken);
-      console.log({ type: "facebook", business_uid: business.business_uid });
+      const updatedBusiness = await this.updateFbToken(business.business_uid, newToken);
+      if(updatedBusiness) response.updated.push(business.business_uid);
+      else response.failed.push(business.business_uid);
     }
-    return businesses;
+    response.percentage = response.updated.length / response.total * 100;
+    return response;
   };
 
 };

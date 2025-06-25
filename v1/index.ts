@@ -136,15 +136,14 @@ const server = (app: Elysia) => {
 
   // cron jobs will call these endpoints to refresh tokens every 1 day
   app.get("/cronjob/refresh/facebook/tokens", async () => {
-    await userService.refreshFacebookTokens();
-    await businessService.refreshFacebookTokens();
-    return;
+    const facebook_users = await userService.refreshFacebookTokens();
+    const facebook_pages = await businessService.refreshFacebookTokens();
+    return { facebook_users, facebook_pages };
   });
 
   // cron jobs will call these endpoints to refresh tokens every 20 minutes
   app.get("/cronjob/refresh/google/tokens", async () => {
-    await userService.refreshGoogleTokens();
-    return;
+    return await userService.refreshGoogleTokens();
   });
   
   return app;

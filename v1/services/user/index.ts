@@ -153,12 +153,24 @@ class UserService {
       FROM facebook_users 
       WHERE expires_at < ${ new Date(Date.now() + tenDaysS).toJSON() };
     `;
+
+    const response = {
+      table: "facebook_users",
+      total: users.length,
+      updated: [] as string[],
+      failed: [] as string[],
+      percentage: 0,
+    };
+
     for (const user of users) {
       const newToken = await facebookApi.exchangeAndVerifyToken(user.token as string);
-      await this.updateFbToken(user.user_uid, newToken);
-      console.log({ type: "facebook", user_uid: user.user_uid });
+      const updatedUser = await this.updateFbToken(user.user_uid, newToken);
+      if(updatedUser) response.updated.push(user.user_uid);
+      else response.failed.push(user.user_uid);
     }
-    return users;
+
+    response.percentage = response.updated.length / response.total * 100;
+    return response;
   };
 
   async refreshGoogleTokens() {
@@ -168,11 +180,23 @@ class UserService {
       FROM google_sheets 
       WHERE expires_at < ${ new Date(Date.now() + tenMinutesS).toJSON() };
     `;
+
+    const response = {
+      table: "google_sheets",
+      total: users.length,
+      updated: [] as string[],
+      failed: [] as string[],
+      percentage: 0,
+    };
+
     for (const user of users) {
-      await googleApi.refreshAccessToken(user.refresh_token as string);
-      console.log({ type: "google", user_uid: user.user_uid });
+      const newToken = await googleApi.refreshAccessToken(user.refresh_token as string);
+      if(newToken) response.updated.push(user.user_uid);
+      else response.failed.push(user.user_uid);
     }
-    return users;
+
+    response.percentage = response.updated.length / response.total * 100;
+    return response;
   };
 };
 
