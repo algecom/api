@@ -69,24 +69,19 @@ class UserService {
   };
 
   async updateFbToken(uid: string, token: NewToken) {
-    console.log({ 
-      uid,
-      token,
-      expires_at: new Date(token.expires_at * 1000).toJSON() });
     const result = await db`
       UPDATE facebook_users
       SET token = ${ token.value }, expires_at = ${ new Date(token.expires_at * 1000).toJSON() }
       WHERE id = ${ uid }
       RETURNING *;
     `;
-    console.log({ result });
     return result[ 0 ] as UserFacebook;
   };
 
   async updateGoogleToken(token: NewToken, refresh_token: string) {
     const result = await db`
       UPDATE google_sheets
-      SET token = ${ token.value }, expires_at = ${ new Date(Date.now() + token.expires_at).toJSON() }
+      SET token = ${ token.value }, expires_at = ${ Date.now() + token.expires_at }
       WHERE refresh_token = ${ refresh_token }
       RETURNING *;
     `;
@@ -147,7 +142,7 @@ class UserService {
   };
 
   async refreshFacebookTokens() {
-    const tenDaysS: number = 10 * 24 * 60 * 60; // 10 days in seconds
+    const tenDaysS: number = 10 * 24 * 60 * 60 * 1000; // 10 days in milliseconds
     const users: UserFacebook[] = await db`
       SELECT * 
       FROM facebook_users 
@@ -174,7 +169,7 @@ class UserService {
   };
 
   async refreshGoogleTokens() {
-    const tenMinutesS: number = 10 * 60; // 10 minutes in seconds
+    const tenMinutesS: number = 10 * 60 * 1000; // 10 minutes in milliseconds
     const users: UserGoogle[] = await db`
       SELECT * 
       FROM google_sheets 
