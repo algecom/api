@@ -131,8 +131,8 @@ class GoogleApi extends BaseApiClient {
           values: [[ 'Name', 'Price', 'Quantity', 'Description' ]],
         },
         {
-          range: 'Orders!A1:G1',
-          values: [[ 'Fullname', 'Conversation', 'Phone', 'Product name', 'Quantity', 'Total', 'Address', 'Note', 'Status' ]],
+          range: 'Orders!A1:J1',
+          values: [[ 'Fullname', 'Conversation', 'Phone', 'Product', 'Quantity', 'Total', 'Address', 'Note', 'Status', 'Date' ]],
         },
       ];
 
@@ -218,7 +218,7 @@ class GoogleApi extends BaseApiClient {
 
   async addOrderToSheet(userGoogle: UserGoogle, spreadsheetId: string, order: Order & { conversation: string }): Promise<void> {
     await this.appendToSheet(userGoogle, spreadsheetId, 'Orders', [
-      [ order.fullname, order.conversation, order.phone, order.productName, order.quantity, order.total, order.address, order.note, order.status || 'Pending' ].map((value) => value || "-"),
+      [ order.fullname, order.conversation, order.phone, order.productName, order.quantity, order.total, order.address, order.note, order.status || 'Pending', new Date().toJSON() ].map((value) => value || "-"),
     ]);
   }
 
@@ -229,13 +229,10 @@ class GoogleApi extends BaseApiClient {
     values: (string | number)[][]
   ): Promise<void> {
     try {
-      console.log({ values });
       await this.makeRequest(`${this.baseUrl}/spreadsheets/${spreadsheetId}/values/${sheetName}:append?valueInputOption=RAW`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${userGoogle.token}` },
-        body: JSON.stringify({ 
-          values
-        }),
+        body: JSON.stringify({ values }),
       });
     } catch (error) {
       return await this.invalidTokenErrorHandler(
