@@ -14,14 +14,15 @@ interface GoogleUser {
 interface Product {
   name: string;
   price: number;
-  quality: string;
+  quantity: string;
   description: string;
 }
 
 interface Order {
   fullname: string;
-  product: string;
-  quality: string;
+  phone: string;
+  productName: string;
+  quantity: string;
   total: number;
   address: string;
   note: string;

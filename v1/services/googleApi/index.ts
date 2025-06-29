@@ -128,11 +128,11 @@ class GoogleApi extends BaseApiClient {
       const headerData = [
         {
           range: 'Products!A1:D1',
-          values: [['Name', 'Price', 'Quantity', 'Description']],
+          values: [[ 'Name', 'Price', 'Quantity', 'Description' ]],
         },
         {
           range: 'Orders!A1:G1',
-          values: [['Fullname', 'Product', 'Quantity', 'Total', 'Address', 'Note', 'Status']],
+          values: [[ 'Fullname', 'Conversation', 'Phone', 'Product name', 'Quantity', 'Total', 'Address', 'Note', 'Status' ]],
         },
       ];
 
@@ -212,13 +212,13 @@ class GoogleApi extends BaseApiClient {
 
   async addProductToSheet(userGoogle: UserGoogle, spreadsheetId: string, product: Product): Promise<void> {
     await this.appendToSheet(userGoogle, spreadsheetId, 'Products', [
-      [ product.name, product.price, product.quality, product.description ],
+      [ product.name, product.price, product.quantity, product.description ],
     ]);
   }
 
-  async addOrderToSheet(userGoogle: UserGoogle, spreadsheetId: string, order: Order): Promise<void> {
+  async addOrderToSheet(userGoogle: UserGoogle, spreadsheetId: string, order: Order & { conversation: string }): Promise<void> {
     await this.appendToSheet(userGoogle, spreadsheetId, 'Orders', [
-      [ order.fullname, order.product, order.quality, order.total, order.address, order.note, order.status || 'Pending' ],
+      [ order.fullname, order.conversation, order.phone, order.productName, order.quantity, order.total, order.address, order.note, order.status || 'Pending' ].map((value) => value || "-"),
     ]);
   }
 
@@ -229,12 +229,12 @@ class GoogleApi extends BaseApiClient {
     values: (string | number)[][]
   ): Promise<void> {
     try {
-      await this.makeRequest(`${this.baseUrl}/spreadsheets/${spreadsheetId}/values/${sheetName}:append`, {
+      console.log({ values });
+      await this.makeRequest(`${this.baseUrl}/spreadsheets/${spreadsheetId}/values/${sheetName}:append?valueInputOption=RAW`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${userGoogle.token}` },
-        body: JSON.stringify({
-          values,
-          valueInputOption: 'USER_ENTERED',
+        body: JSON.stringify({ 
+          values
         }),
       });
     } catch (error) {

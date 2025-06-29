@@ -123,9 +123,9 @@ const server = (app: Elysia) => {
 
   app.post("/facebook/webhook", async ({ body }) => {
     const { entry } = body as any;
-    const { sender, recipient, message } = entry?.[0]?.messaging?.[0];
+    const { sender, recipient } = entry?.[0]?.messaging?.[0];
 
-    const response = await businessService.chat(sender.id, recipient.id, message);
+    const response = await businessService.chat(sender.id, recipient.id);
     
     // const { mode, token, challenge, verify_token } = body as { mode: string, token: string, challenge: string, verify_token: string };
     // const response = await facebookApi.validateWebhook(mode, token, challenge, verify_token);

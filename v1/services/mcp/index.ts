@@ -4,19 +4,22 @@ import * as fs from 'fs/promises';
 import path from 'path';
 import BaseApiClient from "../../plugins/baseApiClient";
 import type { MessageResponse } from "../business/types";
+import type { Order } from "../googleApi/types";
 
 class MCPService extends BaseApiClient {
   tools: GeminiTool[];
   conversation: GeminiContent[];
+  conversationId: string;
   config: MCPConfig;
   business: string;
   customer: string;
   total_token_count: number;
 
-  constructor(config: MCPConfig, conversation: GeminiContent[], business: string = "", customer: string = "") {
+  constructor(config: MCPConfig, conversation: GeminiContent[], conversationId?: string, business: string = "", customer: string = "") {
     super();
     this.config = config;
     this.conversation = conversation;
+    this.conversationId = conversationId || "";
     this.business = business;
     this.customer = customer;
     this.total_token_count = 0;
@@ -24,8 +27,8 @@ class MCPService extends BaseApiClient {
       {
         functionDeclarations: [
           {
-            name: "takeALookAtInventory",
-            description: "Take a look at the inventory of the business",
+            name: "checkInventory",
+            description: "Check the inventory of the business",
             parameters: { type: "object", properties: {}, required: [] }
           }
         ],
@@ -38,14 +41,50 @@ class MCPService extends BaseApiClient {
       {
         functionDeclarations: [
           {
-            name: "takeALookAtOrders",
-            description: "Take a look at the orders of the business",
+            name: "checkOrders",
+            description: "Check the orders of the business",
             parameters: { type: "object", properties: {}, required: [] }
           }
         ],
         codeExecution: async () => {
           const businessService = new BusinessService();
           const orders = this.config.type == "business" ? await businessService.getOrders(this.config.user_uid!, this.config.business_uid!) : [];
+          return orders;
+        }
+      }, 
+      {
+        functionDeclarations: [
+          {
+            name: "placeOrder",
+            description: "Place an order for a product",
+            parameters: { 
+              type: "object", 
+              properties: { 
+                productName: { type: "string" }, 
+                quantity: { type: "number" },
+                fullname: { type: "string" },
+                phone: { type: "string" },
+                address: { type: "string" },
+                note: { type: "string" }
+              }, 
+              required: ["productName", "quantity", "fullname", "phone", "address", "note"] 
+            }
+          }
+        ],
+        codeExecution: async (args: Order) => {
+          console.dir({
+            ...args,
+            conversation: this.conversationId ? "https://fb.com/messenger/t/" + this.conversationId : ""
+          }, { depth: null });
+          const businessService = new BusinessService();
+          const orders = this.config.type == "business" ? await businessService.placeOrder(this.config.user_uid!, this.config.business_uid!, 
+            {
+              ...args,
+              conversation: this.conversationId ? "https://fb.com/messenger/t/" + this.conversationId : "-",
+              note: "-"
+            }
+          ) : [];
+          console.dir({ orders }, { depth: null });
           return orders;
         }
       }
@@ -106,9 +145,10 @@ class MCPService extends BaseApiClient {
         systemInstruction: {
           role: "system",
           parts: [
-            { text: await this.getSystemPrompt() },
+            // { text: await this.getSystemPrompt() },
+            { text: "You are a helpful seller assistant via Facebook Messenger." },
             { text: "Here are the business information: " + this.business },
-            { text: "Here are the customer information: " + this.customer }
+            // { text: "Here are the customer information: " + this.customer }
           ]
         },
         tools: this.tools,

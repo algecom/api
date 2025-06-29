@@ -13,7 +13,7 @@ abstract class BaseApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as any;
-        // console.dir({ url, error: errorData }, { depth: null });
+        console.dir({ url, error: errorData }, { depth: null });
         
         throw new Error(
           errorData.error?.message ||
